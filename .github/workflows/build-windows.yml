@@ -1,0 +1,37 @@
+name: Build JujiTABS EXE
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Prepare embedded plugin
+        shell: pwsh
+        run: Copy-Item "JujiTABS/bin/JujiTABS.dll" "Launcher/Assets/JujiTABS.dll" -Force
+
+      - name: Build single EXE
+        run: dotnet publish Launcher/JujiTABSLauncher.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true
+
+      - name: Copy release EXE
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Copy-Item "Launcher/bin/Release/net8.0-windows/win-x64/publish/JujiTABS.exe" "release/JujiTABS.exe" -Force
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: JujiTABS-Windows
+          path: release/JujiTABS.exe
